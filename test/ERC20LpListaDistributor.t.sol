@@ -135,4 +135,33 @@ contract ERC20LpListaDistributorTest is Test {
         assertEq(totalSupply, 90 ether, "total supply error");
         assertEq(lpBalance, 10000 ether - 90 ether, "lp balance error");
     }
+
+    function test_fetchRewards() public {
+        uint16 currentWeek = veLista.getCurrentWeek();
+        uint256 weekAmount = 700 ether;
+        vm.startPrank(manager);
+
+        lista.approve(address(listaVault), MAX_UINT);
+        listaVault.depositRewards(weekAmount, currentWeek+1);
+
+        uint16 id = listaVault.registerReceiver(address(erc20Distributor));
+
+        uint16[] memory ids = new uint16[](1);
+        ids[0] = id;
+        uint256[] memory percents = new uint256[](1);
+        percents[0] = 1e18;
+        listaVault.setWeeklyReceiverPercent(currentWeek+1, ids, percents);
+
+        vm.stopPrank();
+
+        skip(1 weeks);
+
+        vm.startPrank(user1);
+        erc20Distributor.fetchRewards();
+        vm.stopPrank();
+
+        uint256 rewardRate = erc20Distributor.rewardRate();
+        assertEq(rewardRate, weekAmount / 1 weeks, "reward rate error");
+    }
+
 }

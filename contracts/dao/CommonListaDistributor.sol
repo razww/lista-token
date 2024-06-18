@@ -80,6 +80,27 @@ abstract contract CommonListaDistributor is Initializable, AccessControlUpgradea
         }
     }
 
+    function earned(address account) public view returns (uint256) {
+        uint256 balance = balanceOf[account];
+        uint256 updated = periodFinish;
+        if (updated > block.timestamp) updated = block.timestamp;
+        uint256 duration = updated - lastUpdate;
+
+        uint256 _rewardIntegral = rewardIntegral;
+        if (duration > 0 && totalSupply > 0) {
+            _rewardIntegral += (duration * rewardRate * 1e18) / totalSupply;
+        }
+
+        uint256 amount = storedPendingReward[account];
+
+        uint256 integralFor = rewardIntegralFor[account];
+        if (totalSupply > integralFor) {
+            amount += uint128((balance * (totalSupply - integralFor)) / 1e18);
+        }
+
+        return amount;
+    }
+
     function vaultClaimReward(address _account) onlyRole(VAULT) external returns (uint256) {
         _updateReward(_account, balanceOf[_account], totalSupply);
         uint256 amount = storedPendingReward[_account];
@@ -89,10 +110,18 @@ abstract contract CommonListaDistributor is Initializable, AccessControlUpgradea
         return amount;
     }
 
+    function fetchRewards() external {
+        require(block.timestamp / 1 weeks >= periodFinish / 1 weeks, "Can only fetch once per week");
+        _updateReward(address(0), 0, totalSupply);
+        _fetchRewards();
+    }
+
     function _fetchRewards() internal {
         uint256 amount;
-        uint256 id = emissionId;
-        if (id > 0) amount = vault.allocateNewEmissions(id);
+        uint16 id = emissionId;
+        if (id > 0) {
+            amount = vault.allocateNewEmissions(id);
+        }
 
         uint256 _periodFinish = periodFinish;
         if (block.timestamp < _periodFinish) {
@@ -105,7 +134,6 @@ abstract contract CommonListaDistributor is Initializable, AccessControlUpgradea
         lastUpdate = block.timestamp;
         periodFinish = block.timestamp + REWARD_DURATION;
     }
-
 
     function notifyRegisteredId(uint16 _emissionId) onlyRole(VAULT) external returns (bool) {
         require(emissionId == 0, "Already registered");

@@ -9,7 +9,6 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./interfaces/IDistributor.sol";
 import "../interfaces/IVeLista.sol";
 
-
 contract ListaVault is Initializable, AccessControlUpgradeable, ReentrancyGuard {
     event IncreasedAllocation(address indexed receiver, uint256 increasedAmount);
 
@@ -111,7 +110,7 @@ contract ListaVault is Initializable, AccessControlUpgradeable, ReentrancyGuard 
         token.safeTransfer(msg.sender, total);
     }
 
-    function allocateNewEmission(uint16 id) external returns (uint256) {
+    function allocateNewEmissions(uint16 id) external returns (uint256) {
         address distributor = idToReceiver[id];
         require(distributor == msg.sender, "Distributor not registered");
 
