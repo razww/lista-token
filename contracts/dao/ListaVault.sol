@@ -83,14 +83,20 @@ contract ListaVault is Initializable, AccessControlUpgradeable, ReentrancyGuard 
         require(week > veLista.getCurrentWeek(), "week must be greater than current week");
         uint256 totalPercent;
 
-        // reset last receiver percent set
-        uint256[65535] memory receiverPercent;
-        weeklyReceiverPercent[week] = receiverPercent;
+        if (weeklyReceiverPercent[week][0] == 1) {
+            // this week has set, reset last receiver percent
+            for (uint16 i = 1; i <= receiverId; ++i) {
+                weeklyReceiverPercent[week][i] = 0;
+            }
+        }
         for (uint16 i = 0; i < ids.length; ++i) {
             require(idToReceiver[ids[i]] != address(0), "Receiver not registered");
             weeklyReceiverPercent[week][ids[i]] = percent[i];
             totalPercent += percent[i];
         }
+
+        // mark this week set flag
+        weeklyReceiverPercent[week][0] = 1;
         require(totalPercent <= 1e18, "Total percent must be less than or equal to 1e18");
     }
 
@@ -126,7 +132,7 @@ contract ListaVault is Initializable, AccessControlUpgradeable, ReentrancyGuard 
         return amount;
     }
 
-    function getReceiverWeeklyEmissions(uint16 id, uint16 week) internal view returns (uint256) {
+    function getReceiverWeeklyEmissions(uint16 id, uint16 week) public view returns (uint256) {
         uint256 pct = weeklyReceiverPercent[week][id];
         return (weeklyEmissions[week] * pct) / 1e18;
     }

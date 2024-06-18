@@ -77,6 +77,21 @@ contract ERC20LpListaDistributorTest is Test {
     }
 
     function test_setWeeklyReceiverPercent() public {
+        uint16 currentWeek = veLista.getCurrentWeek();
+        vm.startPrank(manager);
+        uint16 id = listaVault.registerReceiver(address(erc20Distributor));
+        uint16[] memory ids = new uint16[](1);
+        ids[0] = id;
+        uint256[] memory percents = new uint256[](1);
+        percents[0] = 1e18;
+        listaVault.setWeeklyReceiverPercent(currentWeek+1, ids, percents);
 
+        lista.approve(address(listaVault), MAX_UINT);
+        listaVault.depositRewards(100 ether, currentWeek+1);
+        vm.stopPrank();
+
+        assertEq(listaVault.weeklyReceiverPercent(currentWeek+1, 0), 1, "set weekly receiver percent failed");
+        assertEq(listaVault.weeklyReceiverPercent(currentWeek+1, id),  1e18, "set weekly receiver percent failed");
+        assertEq(listaVault.getReceiverWeeklyEmissions(id, currentWeek+1), 100 ether, "get receiver weekly emissions error");
     }
 }
