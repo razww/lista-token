@@ -51,6 +51,12 @@ contract ERC20LpListaDistributorTest is Test {
         );
         erc20Distributor = ERC20LpListaDistributor(address(proxy));
         vm.stopPrank();
+
+        vm.prank(user1);
+        lpToken.approve(address(erc20Distributor), MAX_UINT);
+
+        vm.prank(user2);
+        lpToken.approve(address(erc20Distributor), MAX_UINT);
     }
 
     function test_depositRewards() public {
@@ -93,5 +99,40 @@ contract ERC20LpListaDistributorTest is Test {
         assertEq(listaVault.weeklyReceiverPercent(currentWeek+1, 0), 1, "set weekly receiver percent failed");
         assertEq(listaVault.weeklyReceiverPercent(currentWeek+1, id),  1e18, "set weekly receiver percent failed");
         assertEq(listaVault.getReceiverWeeklyEmissions(id, currentWeek+1), 100 ether, "get receiver weekly emissions error");
+    }
+
+    function test_deposit() public {
+        vm.startPrank(manager);
+        lpToken.transfer(user1, 10000 ether);
+        lpToken.transfer(user2, 10000 ether);
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        erc20Distributor.deposit(100 ether);
+        vm.stopPrank();
+
+        uint256 balance = erc20Distributor.balanceOf(user1);
+        uint256 totalSupply = erc20Distributor.totalSupply();
+        assertEq(balance, 100 ether, "user1 balance error");
+        assertEq(totalSupply, 100 ether, "total supply error");
+    }
+
+    function test_withdraw() public {
+        vm.startPrank(manager);
+        lpToken.transfer(user1, 10000 ether);
+        lpToken.transfer(user2, 10000 ether);
+        vm.stopPrank();
+
+        vm.startPrank(user1);
+        erc20Distributor.deposit(100 ether);
+        erc20Distributor.withdraw(10 ether);
+        vm.stopPrank();
+
+        uint256 balance = erc20Distributor.balanceOf(user1);
+        uint256 totalSupply = erc20Distributor.totalSupply();
+        uint256 lpBalance = lpToken.balanceOf(user1);
+        assertEq(balance, 90 ether, "user1 balance error");
+        assertEq(totalSupply, 90 ether, "total supply error");
+        assertEq(lpBalance, 10000 ether - 90 ether, "lp balance error");
     }
 }
